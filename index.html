@@ -71,12 +71,63 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
 .chartcol{display:flex;flex-direction:column;flex:1;align-items:center;}
 .chartcol .bar{width:100%;max-width:22px;background:var(--orange);border-radius:3px 3px 0 0;}
 .chartcol .lbl{font-size:.62rem;color:var(--muted);margin-top:5px;letter-spacing:.03em;}
+[hidden]{display:none!important;}
+.mgbtn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;margin-bottom:14px;width:100%;}
+.addform select.unitsel{flex:0 0 86px;}
+.hint{font-size:.78rem;color:var(--muted);margin:0 0 10px;}
+.mgform{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.mgform label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:flex;flex-direction:column;gap:3px;}
+.mgform input{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.9rem;font-family:inherit;width:100%;}
+.mgform .full{grid-column:1 / -1;}
+.mgact{display:flex;gap:8px;margin-bottom:12px;}
+.btn{background:var(--text);color:var(--bg);border:none;border-radius:8px;padding:10px 16px;font-size:.76rem;cursor:pointer;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+.btn.ghost{background:none;color:var(--text);border:1px solid var(--border);}
+.btn.danger{background:none;color:var(--orange);border:1px solid var(--orange);}
+#mgSearch{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.88rem;margin-bottom:6px;font-family:inherit;}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.86rem;}
+.mrow small{display:block;color:var(--muted);font-size:.72rem;margin-top:2px;}
+.mrow button{background:none;border:1px solid var(--border);color:var(--blue);border-radius:7px;padding:6px 10px;font-size:.7rem;font-weight:700;text-transform:uppercase;cursor:pointer;flex:0 0 auto;}
+.logrow .lname{flex:1;min-width:0;}
+.logrow .lname .meta{display:block;margin-top:2px;}
+.qty{display:flex;align-items:center;gap:4px;font-size:.78rem;color:var(--muted);}
+.qty input{width:64px;padding:6px 7px;border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-size:.88rem;text-align:right;font-family:inherit;}
+.sugbtn{background:none;border:1px solid var(--blue);color:var(--blue);border-radius:16px;padding:3px 10px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;}
+.sugbtn:active{opacity:.6;}
+.tgform{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.tgform label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:flex;flex-direction:column;gap:3px;}
+.tgform input{padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:.9rem;font-family:inherit;width:100%;}
+.histcard{display:none;}
+.histcard.show{display:block;}
+.chartcol .mini{display:flex;gap:2px;margin-top:4px;height:20px;align-items:flex-end;width:100%;max-width:22px;}
+.chartcol .mini div{flex:1;border-radius:2px 2px 0 0;}
+.hrow{padding:10px 0;border-bottom:1px solid var(--border);}
+.hrow:last-child{border-bottom:none;}
+.hrow .hd{display:flex;justify-content:space-between;align-items:baseline;font-size:.85rem;margin-bottom:6px;}
+.hrow .hd b{font-family:'Barlow Condensed',sans-serif;font-size:1.05rem;}
+.hbars{display:flex;gap:10px;}
+.hbar{flex:1;}
+.hbar .lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;margin-bottom:3px;}
+.hbar .track{height:5px;border-radius:3px;background:var(--border);overflow:hidden;}
+.hbar .track>div{height:100%;}
 </style>
 </head>
 <body>
 <div class="wrap">
 <p class="brand">Tracker Macro</p>
 <div class="today" id="todayLabel"></div>
+<button class="mgbtn" id="mgToggle">Gestisci alimenti</button>
+<button class="mgbtn" id="tgToggle">Modifica obiettivi</button>
+<div class="card" id="targetPanel" hidden>
+  <p class="eyebrow">Obiettivi giornalieri</p>
+  <div id="tgForm"></div>
+</div>
+<div class="card" id="manager" hidden>
+  <p class="eyebrow">Gestisci alimenti</p>
+  <p class="hint">Valori per 100 g. Se imposti anche l'unità (es. banana = 120 g) potrai inserirlo a pezzi.</p>
+  <div id="mgForm"></div>
+  <input id="mgSearch" type="search" placeholder="Cerca alimento…">
+  <div id="mgList"></div>
+</div>
 
 <div class="card" id="kcalcard"></div>
 <div class="card" id="macrocard"></div>
@@ -85,33 +136,27 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
 <p class="eyebrow">Aggiungi alimento</p>
 <div class="addform">
   <select class="food" id="foodSel"></select>
-  <input class="grams" id="gramsInp" type="number" inputmode="decimal" min="0" step="5" placeholder="g">
+  <input class="grams" id="gramsInp" type="number" inputmode="decimal" min="0" step="any" placeholder="quantità">
+  <select class="unitsel" id="unitSel"></select>
   <select class="meal" id="mealSel">
     <option>Colazione</option><option>Pranzo</option><option>Cena</option>
   </select>
   <button id="addBtn">Aggiungi</button>
-</div>
-<button class="linkbtn" id="customToggle">+ Alimento personalizzato</button>
-<div class="custom" id="customForm">
-  <input class="cname" id="cName" placeholder="Nome alimento">
-  <input id="cKcal" type="number" placeholder="kcal/100g">
-  <input id="cP" type="number" placeholder="prot/100g">
-  <input id="cC" type="number" placeholder="carb/100g">
-  <input id="cF" type="number" placeholder="grassi/100g">
-  <button class="linkbtn" id="cSave">Salva</button>
 </div>
 <div class="loglist" id="loglist"></div>
 </div>
 
 <div class="card advice" id="advice"></div>
 
-<div class="card">
+
+
+<div class="status" id="status"></div>
+<button class="mgbtn" id="histToggle">Riepilogo giorni</button>
+<div class="card histcard" id="histPanel">
 <p class="eyebrow">Storico giorni</p>
 <div id="histChart"></div>
 <div id="histTable"></div>
 </div>
-
-<div class="status" id="status"></div>
 </div>
 
 <script>
@@ -144,8 +189,9 @@ const BASE_FOODS = [
   {id:'whey',label:'Proteine idrolizzate',kcal:380,p:90,c:3,f:3}
 ];
 
-const TARGET = { kcal:2700, p:125, c:360, f:85 };
-const TDEE = 2320;
+const UNITS = {banana:['banana',120], uova:['uovo',55], albume:['albume',33], yogurtlidl:['vasetto',200], mozzlight:['mozzarella',125]};
+BASE_FOODS.forEach(f=>{ if(UNITS[f.id]){ f.unit=UNITS[f.id][0]; f.unitG=UNITS[f.id][1]; } });
+const DEFAULT_TARGET = { kcal:2700, p:125, c:360, f:85, tdee:2320 };
 const NEVER_SUGGEST = ['gallette'];
 const ITALIAN_DATE_OPTS = {weekday:'long', year:'numeric', month:'long', day:'numeric'};
 
@@ -158,11 +204,13 @@ let STATE;
 try{ STATE = JSON.parse(localStorage.getItem('tracker-macro-state')); }catch(e){ STATE = null; }
 if(!STATE || typeof STATE!=='object') STATE = {};
 if(!STATE.days) STATE.days = {};
-if(!STATE.custom) STATE.custom = [];
+if(!Array.isArray(STATE.foods)){ STATE.foods = BASE_FOODS.map(f=>Object.assign({},f)).concat(STATE.custom||[]); delete STATE.custom; }
+if(!STATE.target) STATE.target = Object.assign({}, DEFAULT_TARGET);
+else STATE.target = Object.assign({}, DEFAULT_TARGET, STATE.target);
 const TODAY = todayKey();
 if(!STATE.days[TODAY]) STATE.days[TODAY] = {log:[]};
 
-function allFoods(){ return BASE_FOODS.concat(STATE.custom); }
+function allFoods(){ return STATE.foods; }
 function foodById(id){ return allFoods().find(f=>f.id===id); }
 
 function dayTotals(dayLog){
@@ -187,9 +235,54 @@ function ringSvg(pct, color, size, stroke){
   </svg>`;
 }
 
+function renderTgForm(){
+  const t = STATE.target;
+  document.getElementById('tgForm').innerHTML = `
+    <div class="tgform">
+      <label>Obiettivo calorie (kcal)<input id="tfKcal" type="number" inputmode="decimal" value="${t.kcal}"></label>
+      <label>Mantenimento (kcal)<input id="tfTdee" type="number" inputmode="decimal" value="${t.tdee}"></label>
+      <label>Proteine (g)<input id="tfP" type="number" inputmode="decimal" value="${t.p}"></label>
+      <label>Carboidrati (g)<input id="tfC" type="number" inputmode="decimal" value="${t.c}"></label>
+      <label>Grassi (g)<input id="tfF" type="number" inputmode="decimal" value="${t.f}"></label>
+    </div>
+    <div class="mgact">
+      <button class="btn" id="tfSave">Salva obiettivi</button>
+      <button class="btn ghost" id="tfReset">Ripristina default</button>
+    </div>`;
+  document.getElementById('tfSave').addEventListener('click', ()=>{
+    const g = id=>parseFloat(document.getElementById(id).value);
+    STATE.target = {
+      kcal: g('tfKcal')||STATE.target.kcal,
+      tdee: g('tfTdee')||STATE.target.tdee,
+      p: g('tfP')||STATE.target.p,
+      c: g('tfC')||STATE.target.c,
+      f: g('tfF')||STATE.target.f
+    };
+    renderAll(); save();
+  });
+  document.getElementById('tfReset').addEventListener('click', ()=>{
+    STATE.target = Object.assign({}, DEFAULT_TARGET);
+    renderTgForm(); renderAll(); save();
+  });
+}
+document.getElementById('tgToggle').addEventListener('click', ()=>{
+  const p = document.getElementById('targetPanel');
+  p.hidden = !p.hidden;
+  document.getElementById('tgToggle').textContent = p.hidden ? 'Modifica obiettivi' : 'Chiudi obiettivi';
+});
+
 function renderFoodSelect(){
   const sel = document.getElementById('foodSel');
+  const prev = sel.value;
   sel.innerHTML = allFoods().map(f=>`<option value="${f.id}">${f.label}</option>`).join('');
+  if(prev && foodById(prev)) sel.value = prev;
+}
+
+function renderUnitSel(){
+  const fo = foodById(document.getElementById('foodSel').value);
+  const sel = document.getElementById('unitSel');
+  sel.innerHTML = '<option value="g">g</option>' + (fo && fo.unitG ? `<option value="u">${fo.unit}</option>` : '');
+  sel.value = (fo && fo.unitG) ? 'u' : 'g';
 }
 
 function renderToday(){
@@ -198,15 +291,15 @@ function renderToday(){
 }
 
 function renderKcalCard(t){
-  const pct = t.kcal/TARGET.kcal;
-  const surplusMsg = t.kcal >= TDEE
-    ? `In surplus di <b>${t.kcal-TDEE} kcal</b> sul mantenimento (${TDEE})`
-    : `Mancano <b>${TDEE-t.kcal} kcal</b> al mantenimento (${TDEE})`;
+  const pct = t.kcal/STATE.target.kcal;
+  const surplusMsg = t.kcal >= STATE.target.tdee
+    ? `In surplus di <b>${t.kcal-TDEE} kcal</b> sul mantenimento (${STATE.target.tdee})`
+    : `Mancano <b>${STATE.target.tdee-t.kcal} kcal</b> al mantenimento (${STATE.target.tdee})`;
   document.getElementById('kcalcard').innerHTML = `
     <p class="eyebrow">Calorie di oggi</p>
     <div class="ringrow">
       <div class="ringbig">${ringSvg(pct,'var(--orange)',120,12)}
-        <div class="num"><b>${t.kcal}</b><span>/ ${TARGET.kcal} kcal</span></div>
+        <div class="num"><b>${t.kcal}</b><span>/ ${STATE.target.kcal} kcal</span></div>
       </div>
       <div class="kcalinfo">${surplusMsg}</div>
     </div>`;
@@ -223,9 +316,9 @@ function renderMacroCard(t){
   document.getElementById('macrocard').innerHTML = `
     <p class="eyebrow">Macronutrienti</p>
     <div class="macrorow">
-      ${mRing('p','Prot',t.p,TARGET.p,'var(--teal)')}
-      ${mRing('c','Carb',t.c,TARGET.c,'var(--blue)')}
-      ${mRing('f','Gras',t.f,TARGET.f,'var(--amber)')}
+      ${mRing('p','Prot',t.p,STATE.target.p,'var(--teal)')}
+      ${mRing('c','Carb',t.c,STATE.target.c,'var(--blue)')}
+      ${mRing('f','Gras',t.f,STATE.target.f,'var(--amber)')}
     </div>`;
 }
 
@@ -236,64 +329,122 @@ function renderLog(){
   box.innerHTML = log.map((e,i)=>{
     const fo = foodById(e.food);
     const kcal = fo? Math.round(fo.kcal*e.grams/100) : 0;
+    const isU = e.units!=null && fo && fo.unitG;
+    const val = isU ? e.units : e.grams;
+    const suf = isU ? fo.unit : 'g';
     return `<div class="logrow">
-      <span>${fo?fo.label:e.food} — ${e.grams} g <span class="meta">${e.meal} · ${kcal} kcal</span></span>
+      <div class="lname">${fo?fo.label:'(alimento rimosso)'}<span class="meta">${e.meal} · ${kcal} kcal${isU?' · '+e.grams+' g':''}</span></div>
+      <div class="qty"><input class="qtyInp" type="number" inputmode="decimal" min="0" step="any" value="${val}" data-i="${i}"><span>${suf}</span></div>
       <button data-i="${i}" class="delBtn">×</button>
     </div>`;
   }).join('');
+  box.querySelectorAll('.qtyInp').forEach(inp=>inp.addEventListener('change',()=>{
+    const e = log[parseInt(inp.dataset.i,10)];
+    const fo = foodById(e.food);
+    const v = parseFloat(inp.value)||0;
+    if(v<=0){ renderAll(); return; }
+    if(e.units!=null && fo && fo.unitG){ e.units = v; e.grams = Math.round(v*fo.unitG); } else { e.grams = v; }
+    renderAll(); save();
+  }));
   box.querySelectorAll('.delBtn').forEach(b=>b.addEventListener('click',()=>{
     STATE.days[TODAY].log.splice(parseInt(b.dataset.i,10),1);
     renderAll(); save();
   }));
 }
 
-function bestFoodFor(macro){
-  const candidates = allFoods().filter(f=>!NEVER_SUGGEST.includes(f.id));
-  candidates.sort((a,b)=> b[macro]-a[macro]);
-  return candidates[0];
+const SUG_IDX = {p:0,c:0,f:0};
+const MACRO_KCAL = {p:4,c:4,f:9};
+function candidatesFor(m){
+  return allFoods().filter(f=>!NEVER_SUGGEST.includes(f.id) && f[m]>0 && f.kcal>0 && (f[m]*MACRO_KCAL[m]/f.kcal)>=0.4)
+    .sort((a,b)=>b[m]-a[m]);
+}
+function amountText(fo, grams){
+  if(fo.unitG && grams>=fo.unitG/2){
+    return `${Math.round(grams/fo.unitG*10)/10} ${fo.unit} (~${grams} g)`;
+  }
+  return `${grams} g`;
+}
+function sugLine(m, label, miss){
+  const list = candidatesFor(m);
+  if(!list.length) return `${label}: mancano <b>${miss} g</b>.`;
+  const fo = list[SUG_IDX[m] % list.length];
+  const g = Math.max(5, Math.round(miss/fo[m]*100/5)*5);
+  return `${label}: mancano <b>${miss} g</b> — prova <button class="sugbtn" data-m="${m}">${amountText(fo,g)} di ${fo.label} \u21bb</button>`;
 }
 
 function renderAdvice(t){
   const box = document.getElementById('advice');
-  const missP = Math.max(0, TARGET.p-t.p);
-  const missC = Math.max(0, TARGET.c-t.c);
-  const missF = Math.max(0, TARGET.f-t.f);
-  const missKcal = Math.max(0, TARGET.kcal-t.kcal);
+  const missP = Math.max(0, STATE.target.p-t.p);
+  const missC = Math.max(0, STATE.target.c-t.c);
+  const missF = Math.max(0, STATE.target.f-t.f);
+  const missKcal = Math.max(0, STATE.target.kcal-t.kcal);
   if(missP<=0 && missC<=0 && missF<=0){
     box.innerHTML = `<p class="eyebrow">Consigli</p><p class="allok">Obiettivi di oggi raggiunti</p>`;
     return;
   }
-  const suggestions = [];
-  if(missP>0){ const fo = bestFoodFor('p'); const g = Math.round(missP/fo.p*100/5)*5; suggestions.push(`Proteine: mancano <b>${missP} g</b> — es. circa ${g} g di ${fo.label}.`); }
-  if(missC>0){ const fo = bestFoodFor('c'); const g = Math.round(missC/fo.c*100/5)*5; suggestions.push(`Carboidrati: mancano <b>${missC} g</b> — es. circa ${g} g di ${fo.label}.`); }
-  if(missF>0){ const fo = bestFoodFor('f'); const g = Math.round(missF/fo.f*100/5)*5; suggestions.push(`Grassi: mancano <b>${missF} g</b> — es. circa ${g} g di ${fo.label}.`); }
-  box.innerHTML = `<p class="eyebrow">Cosa manca e cosa aggiungere</p><ul>${suggestions.map(s=>`<li>${s}</li>`).join('')}</ul>
-    <p style="font-size:.78rem;color:var(--muted);margin:8px 0 0;">Calorie ancora da coprire oggi: <b style="color:var(--text)">${missKcal} kcal</b></p>`;
+  const lines = [];
+  if(missP>0) lines.push(sugLine('p','Proteine',missP));
+  if(missC>0) lines.push(sugLine('c','Carboidrati',missC));
+  if(missF>0) lines.push(sugLine('f','Grassi',missF));
+  box.innerHTML = `<p class="eyebrow">Cosa manca e cosa aggiungere</p><ul>${lines.map(s=>`<li>${s}</li>`).join('')}</ul>
+    <p style="font-size:.78rem;color:var(--muted);margin:8px 0 0;">Tocca un alimento consigliato per vederne un altro. Calorie ancora da coprire: <b style="color:var(--text)">${missKcal} kcal</b></p>`;
+  box.querySelectorAll('.sugbtn').forEach(b=>b.addEventListener('click',()=>{
+    SUG_IDX[b.dataset.m]++;
+    renderAdvice(dayTotals(STATE.days[TODAY].log));
+  }));
+}
+
+function kcalColor(t){
+  const pct = t.kcal / STATE.target.kcal;
+  if(pct < 0.85) return 'var(--amber)';
+  if(pct > 1.15) return 'var(--orange)';
+  return 'var(--teal)';
 }
 
 function renderHistory(){
   const keys = Object.keys(STATE.days).sort();
   const chartBox = document.getElementById('histChart');
   const tableBox = document.getElementById('histTable');
-  if(keys.length<=1){
+  if(!document.getElementById('histPanel').classList.contains('show')) return;
+  if(keys.length===0){
     chartBox.innerHTML = '';
-    tableBox.innerHTML = '<p class="empty">Ancora nessun giorno precedente registrato.</p>';
+    tableBox.innerHTML = '<p class="empty">Ancora nessun giorno registrato.</p>';
     return;
   }
   const last = keys.slice(-10);
-  const maxKcal = Math.max(TARGET.kcal, ...last.map(k=>dayTotals(STATE.days[k].log).kcal));
+  const maxKcal = Math.max(STATE.target.kcal, ...last.map(k=>dayTotals(STATE.days[k].log).kcal));
   chartBox.innerHTML = `<div class="chart">` + last.map(k=>{
     const t = dayTotals(STATE.days[k].log);
     const h = Math.max(2, Math.round(t.kcal/maxKcal*76));
     const dd = k.slice(8,10)+'/'+k.slice(5,7);
-    return `<div class="chartcol"><div class="bar" style="height:${h}px" title="${t.kcal} kcal"></div><div class="lbl">${dd}</div></div>`;
+    const pP = Math.min(100, Math.round(t.p/STATE.target.p*100));
+    const pC = Math.min(100, Math.round(t.c/STATE.target.c*100));
+    const pF = Math.min(100, Math.round(t.f/STATE.target.f*100));
+    return `<div class="chartcol">
+      <div class="bar" style="height:${h}px;background:${kcalColor(t)}" title="${t.kcal} kcal"></div>
+      <div class="mini">
+        <div style="height:${pP}%;background:var(--teal)" title="Prot ${t.p}g"></div>
+        <div style="height:${pC}%;background:var(--blue)" title="Carb ${t.c}g"></div>
+        <div style="height:${pF}%;background:var(--amber)" title="Gras ${t.f}g"></div>
+      </div>
+      <div class="lbl">${dd}</div></div>`;
   }).join('') + `</div>`;
   const rows = last.slice().reverse().map(k=>{
     const t = dayTotals(STATE.days[k].log);
-    const dd = k.slice(8,10)+'/'+k.slice(5,7);
-    return `<tr><td>${dd}</td><td>${t.kcal}</td><td>${t.p}</td><td>${t.c}</td><td>${t.f}</td></tr>`;
+    const dd = new Date(k+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
+    const pP = Math.min(100, Math.round(t.p/STATE.target.p*100));
+    const pC = Math.min(100, Math.round(t.c/STATE.target.c*100));
+    const pF = Math.min(100, Math.round(t.f/STATE.target.f*100));
+    return `<div class="hrow">
+      <div class="hd"><span>${dd}</span><b style="color:${kcalColor(t)}">${t.kcal} kcal</b></div>
+      <div class="hbars">
+        <div class="hbar"><div class="lbl"><span>Prot</span><span>${t.p}g</span></div><div class="track"><div style="width:${pP}%;background:var(--teal)"></div></div></div>
+        <div class="hbar"><div class="lbl"><span>Carb</span><span>${t.c}g</span></div><div class="track"><div style="width:${pC}%;background:var(--blue)"></div></div></div>
+        <div class="hbar"><div class="lbl"><span>Gras</span><span>${t.f}g</span></div><div class="track"><div style="width:${pF}%;background:var(--amber)"></div></div></div>
+      </div>
+    </div>`;
   }).join('');
-  tableBox.innerHTML = `<table class="hist"><tr><th>Giorno</th><th>Kcal</th><th>Prot</th><th>Carb</th><th>Gras</th></tr>${rows}</table>`;
+  tableBox.innerHTML = rows;
 }
 
 function renderAll(){
@@ -308,35 +459,98 @@ function renderAll(){
 
 document.getElementById('addBtn').addEventListener('click', ()=>{
   const food = document.getElementById('foodSel').value;
-  const grams = parseFloat(document.getElementById('gramsInp').value)||0;
+  const qty = parseFloat(document.getElementById('gramsInp').value)||0;
   const meal = document.getElementById('mealSel').value;
-  if(grams<=0) return;
+  const mode = document.getElementById('unitSel').value;
+  const fo = foodById(food);
+  if(qty<=0 || !fo) return;
   if(meal==='Cena' && food==='gallette'){
     alert('Hai detto di non voler mai cenare con le gallette: scegli un altro alimento per la cena.');
     return;
   }
-  STATE.days[TODAY].log.push({food, grams, meal});
+  const entry = {food, meal, grams:qty};
+  if(mode==='u' && fo.unitG){ entry.units = qty; entry.grams = Math.round(qty*fo.unitG); }
+  STATE.days[TODAY].log.push(entry);
   document.getElementById('gramsInp').value='';
   renderAll(); save();
 });
+document.getElementById('foodSel').addEventListener('change', renderUnitSel);
 
-document.getElementById('customToggle').addEventListener('click', ()=>{
-  document.getElementById('customForm').classList.toggle('show');
-});
-document.getElementById('cSave').addEventListener('click', ()=>{
-  const name = document.getElementById('cName').value.trim();
-  const kcal = parseFloat(document.getElementById('cKcal').value)||0;
-  const p = parseFloat(document.getElementById('cP').value)||0;
-  const c = parseFloat(document.getElementById('cC').value)||0;
-  const f = parseFloat(document.getElementById('cF').value)||0;
+// ---------- gestione alimenti ----------
+let editingId = null;
+function renderMgForm(){
+  const fo = editingId ? foodById(editingId) : null;
+  const v = (k)=> fo && fo[k]!=null ? fo[k] : '';
+  document.getElementById('mgForm').innerHTML = `
+    <div class="mgform">
+      <label class="full">Nome<input id="mfName" value="${fo?fo.label.replace(/"/g,'&quot;'):''}" placeholder="es. Parmigiano Reggiano"></label>
+      <label>Kcal / 100 g<input id="mfKcal" type="number" inputmode="decimal" value="${v('kcal')}"></label>
+      <label>Proteine / 100 g<input id="mfP" type="number" inputmode="decimal" value="${v('p')}"></label>
+      <label>Carboidrati / 100 g<input id="mfC" type="number" inputmode="decimal" value="${v('c')}"></label>
+      <label>Grassi / 100 g<input id="mfF" type="number" inputmode="decimal" value="${v('f')}"></label>
+      <label>Unità (facoltativa)<input id="mfUnit" value="${v('unit')}" placeholder="es. banana"></label>
+      <label>Grammi per unità<input id="mfUnitG" type="number" inputmode="decimal" value="${v('unitG')}" placeholder="es. 120"></label>
+    </div>
+    <div class="mgact">
+      <button class="btn" id="mfSave">${fo?'Salva modifiche':'Aggiungi alimento'}</button>
+      ${fo?'<button class="btn ghost" id="mfCancel">Annulla</button><button class="btn danger" id="mfDel">Elimina</button>':''}
+    </div>`;
+  document.getElementById('mfSave').addEventListener('click', saveFood);
+  if(fo){
+    document.getElementById('mfCancel').addEventListener('click', ()=>{ editingId=null; renderMgForm(); });
+    document.getElementById('mfDel').addEventListener('click', ()=>{
+      if(!confirm('Eliminare questo alimento dalla lista?')) return;
+      STATE.foods = STATE.foods.filter(x=>x.id!==editingId);
+      editingId=null; renderMgForm(); renderMgList(); renderFoodSelect(); renderUnitSel(); renderAll(); save();
+    });
+  }
+}
+function saveFood(){
+  const g = id=>document.getElementById(id).value;
+  const name = g('mfName').trim();
   if(!name) return;
-  const id = 'custom_'+Date.now();
-  STATE.custom.push({id,label:name,kcal,p,c,f});
-  ['cName','cKcal','cP','cC','cF'].forEach(id2=>document.getElementById(id2).value='');
-  document.getElementById('customForm').classList.remove('show');
-  renderFoodSelect();
-  document.getElementById('foodSel').value = id;
-  save();
+  const p = parseFloat(g('mfP'))||0, c = parseFloat(g('mfC'))||0, f = parseFloat(g('mfF'))||0;
+  let kcal = parseFloat(g('mfKcal'));
+  if(isNaN(kcal)) kcal = Math.round(p*4 + c*4 + f*9);
+  const un = g('mfUnit').trim(), ug = parseFloat(g('mfUnitG'))||0;
+  const hasU = un && ug>0;
+  let newId = null;
+  if(editingId){
+    const fo = foodById(editingId);
+    Object.assign(fo, {label:name,kcal,p,c,f});
+    if(hasU){ fo.unit=un; fo.unitG=ug; } else { delete fo.unit; delete fo.unitG; }
+  } else {
+    const fo = {id:'f_'+Date.now(), label:name, kcal, p, c, f};
+    if(hasU){ fo.unit=un; fo.unitG=ug; }
+    STATE.foods.push(fo); newId = fo.id;
+  }
+  editingId = null;
+  renderMgForm(); renderMgList(); renderFoodSelect();
+  if(newId) document.getElementById('foodSel').value = newId;
+  renderUnitSel(); renderAll(); save();
+}
+function renderMgList(){
+  const q = document.getElementById('mgSearch').value.trim().toLowerCase();
+  const list = allFoods().filter(f=>!q || f.label.toLowerCase().includes(q));
+  document.getElementById('mgList').innerHTML = list.map(f=>`
+    <div class="mrow"><span>${f.label}<small>${f.kcal} kcal · P ${f.p} · C ${f.c} · G ${f.f}${f.unitG?' · 1 '+f.unit+' = '+f.unitG+' g':''}</small></span>
+    <button data-id="${f.id}" class="editBtn">Modifica</button></div>`).join('') || '<p class="empty">Nessun alimento trovato.</p>';
+  document.querySelectorAll('#mgList .editBtn').forEach(b=>b.addEventListener('click',()=>{
+    editingId = b.dataset.id; renderMgForm();
+    document.getElementById('mgForm').scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+}
+document.getElementById('mgSearch').addEventListener('input', renderMgList);
+document.getElementById('histToggle').addEventListener('click', ()=>{
+  const p = document.getElementById('histPanel');
+  p.classList.toggle('show');
+  document.getElementById('histToggle').textContent = p.classList.contains('show') ? 'Chiudi riepilogo' : 'Riepilogo giorni';
+  if(p.classList.contains('show')){ renderHistory(); p.scrollIntoView({behavior:'smooth',block:'start'}); }
+});
+document.getElementById('mgToggle').addEventListener('click', ()=>{
+  const m = document.getElementById('manager');
+  m.hidden = !m.hidden;
+  document.getElementById('mgToggle').textContent = m.hidden ? 'Gestisci alimenti' : 'Chiudi gestione alimenti';
 });
 
 function save(){
@@ -344,6 +558,10 @@ function save(){
 }
 
 renderFoodSelect();
+renderUnitSel();
+renderTgForm();
+renderMgForm();
+renderMgList();
 renderAll();
 
 </script>
