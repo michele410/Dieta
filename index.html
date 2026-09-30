@@ -294,7 +294,7 @@ function renderToday(){
 function renderKcalCard(t){
   const pct = t.kcal/STATE.target.kcal;
   const surplusMsg = t.kcal >= STATE.target.tdee
-    ? `In surplus di <b>${t.kcal-TDEE} kcal</b> sul mantenimento (${STATE.target.tdee})`
+    ? `In surplus di <b>${t.kcal-STATE.target.tdee} kcal</b> sul mantenimento (${STATE.target.tdee})`
     : `Mancano <b>${STATE.target.tdee-t.kcal} kcal</b> al mantenimento (${STATE.target.tdee})`;
   document.getElementById('kcalcard').innerHTML = `
     <p class="eyebrow">Calorie di oggi</p>
