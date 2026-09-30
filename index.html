@@ -459,21 +459,27 @@ function renderAll(){
 }
 
 document.getElementById('addBtn').addEventListener('click', ()=>{
-  const food = document.getElementById('foodSel').value;
-  const qty = parseFloat(document.getElementById('gramsInp').value)||0;
-  const meal = document.getElementById('mealSel').value;
-  const mode = document.getElementById('unitSel').value;
-  const fo = foodById(food);
-  if(qty<=0 || !fo) return;
-  if(meal==='Cena' && food==='gallette'){
-    alert('Hai detto di non voler mai cenare con le gallette: scegli un altro alimento per la cena.');
-    return;
+  try{
+    const food = document.getElementById('foodSel').value;
+    const qty = parseFloat((document.getElementById('gramsInp').value||'').replace(',','.'))||0;
+    const meal = document.getElementById('mealSel').value;
+    const mode = document.getElementById('unitSel').value;
+    const fo = foodById(food);
+    if(!fo){ alert('Alimento non trovato: riselezionalo dall\'elenco e riprova.'); return; }
+    if(qty<=0){ alert('Inserisci una quantit\u00e0 maggiore di zero.'); return; }
+    if(meal==='Cena' && food==='gallette'){
+      alert('Hai detto di non voler mai cenare con le gallette: scegli un altro alimento per la cena.');
+      return;
+    }
+    const entry = {food, meal, grams:qty};
+    if(mode==='u' && fo.unitG){ entry.units = qty; entry.grams = Math.round(qty*fo.unitG); }
+    else if(mode==='u' && !fo.unitG){ entry.grams = qty; }
+    STATE.days[TODAY].log.push(entry);
+    document.getElementById('gramsInp').value='';
+    renderAll(); save();
+  }catch(err){
+    alert('Errore nell\'aggiunta: ' + err.message);
   }
-  const entry = {food, meal, grams:qty};
-  if(mode==='u' && fo.unitG){ entry.units = qty; entry.grams = Math.round(qty*fo.unitG); }
-  STATE.days[TODAY].log.push(entry);
-  document.getElementById('gramsInp').value='';
-  renderAll(); save();
 });
 document.getElementById('foodSel').addEventListener('change', renderUnitSel);
 
