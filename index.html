@@ -110,6 +110,21 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
 .hbar .lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;margin-bottom:3px;}
 .hbar .track{height:5px;border-radius:3px;background:var(--border);overflow:hidden;}
 .hbar .track>div{height:100%;}
+.fullpage{position:fixed;inset:0;background:var(--bg);z-index:50;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px));}
+.fphead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;position:sticky;top:0;background:var(--bg);padding-bottom:8px;z-index:2;}
+.fphead .fptitle{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.3rem;text-transform:uppercase;letter-spacing:.03em;}
+.closebtn{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;font-size:.78rem;font-weight:700;cursor:pointer;text-transform:uppercase;letter-spacing:.05em;}
+.daycard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow);}
+.daycard .hd{display:flex;justify-content:space-between;align-items:baseline;font-size:.95rem;margin-bottom:8px;}
+.daycard .hd .dname{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1.1rem;text-transform:capitalize;}
+.daycard .hbars{display:flex;gap:10px;margin-bottom:10px;}
+.foodline{font-size:.8rem;padding:5px 0;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:6px;}
+.foodline:first-child{border-top:none;}
+.foodline .m{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em;flex:0 0 auto;}
+.tip{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);}
+.tip .eyebrow{margin-bottom:6px;}
+.tip p{margin:0;font-size:.88rem;}
+.tip .catpill{display:inline-block;background:var(--teal);color:#fff;border-radius:12px;padding:2px 10px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-left:4px;}
 </style>
 </head>
 <body>
@@ -130,6 +145,7 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
   <div id="mgList"></div>
 </div>
 
+<div class="tip" id="tipCard" hidden></div>
 <div class="card" id="kcalcard"></div>
 <div class="card" id="macrocard"></div>
 
@@ -152,12 +168,13 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
 
 
 <div class="status" id="status"></div>
-<button class="mgbtn" id="histToggle">Riepilogo giorni</button>
-<div class="card histcard" id="histPanel">
-<p class="eyebrow">Storico giorni</p>
-<div id="histChart"></div>
-<div id="histTable"></div>
+<button class="mgbtn" id="histToggle">Apri riepilogo</button>
 </div>
+
+<div class="fullpage" id="historyPage" hidden>
+  <div class="fphead"><span class="fptitle">Riepilogo</span><button class="closebtn" id="histClose">Chiudi ×</button></div>
+  <div class="card"><p class="eyebrow">Andamento</p><div id="histChart"></div></div>
+  <div id="histDays"></div>
 </div>
 
 <script>
@@ -194,11 +211,22 @@ const UNITS = {banana:['banana',120], uova:['uovo',55], albume:['albume',33], yo
 BASE_FOODS.forEach(f=>{ if(UNITS[f.id]){ f.unit=UNITS[f.id][0]; f.unitG=UNITS[f.id][1]; } });
 const DEFAULT_TARGET = { kcal:2700, p:125, c:360, f:85, tdee:2320 };
 const NEVER_SUGGEST = ['gallette'];
+const PROTEIN_CAT = {pollo:'carne', bresaola:'carne', tonno:'pesce', sgombro:'pesce', lenticchie:'legumi', ceci:'legumi', uova:'uova', albume:'uova'};
+const CAT_LABEL = {carne:'carne', pesce:'pesce', legumi:'legumi', uova:'uova'};
+const CAT_NEXT = {carne:'pesce', pesce:'legumi', legumi:'uova', uova:'carne'};
 const ITALIAN_DATE_OPTS = {weekday:'long', year:'numeric', month:'long', day:'numeric'};
 
 function todayKey(){
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function dateKeyOffset(days){
+  const d = new Date();
+  d.setDate(d.getDate()+days);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtDay(k){
+  return new Date(k+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
 }
 
 let STATE;
@@ -402,17 +430,49 @@ function kcalColor(t){
   return 'var(--teal)';
 }
 
-function renderHistory(){
+
+function renderTip(){
+  const box = document.getElementById('tipCard');
+  const yKey = dateKeyOffset(-1);
+  const yLog = STATE.days[yKey] ? STATE.days[yKey].log : [];
+  const totals = {carne:0,pesce:0,legumi:0,uova:0};
+  yLog.forEach(e=>{
+    const cat = PROTEIN_CAT[e.food];
+    if(!cat) return;
+    const fo = foodById(e.food);
+    if(fo) totals[cat] += fo.p*e.grams/100;
+  });
+  let domCat=null, domVal=0;
+  Object.keys(totals).forEach(c=>{ if(totals[c]>domVal){ domVal=totals[c]; domCat=c; } });
+  if(!domCat){ box.hidden = true; return; }
+  const sugCat = CAT_NEXT[domCat];
+  const examples = allFoods().filter(f=>PROTEIN_CAT[f.id]===sugCat && !NEVER_SUGGEST.includes(f.id)).slice(0,3).map(f=>f.label);
+  box.hidden = false;
+  box.innerHTML = `<p class="eyebrow">Cosa mangiare oggi</p>
+    <p>Ieri hai puntato soprattutto su <b>${CAT_LABEL[domCat]}</b>. Oggi prova a variare con<span class="catpill">${CAT_LABEL[sugCat]}</span>${examples.length?' — es. '+examples.join(', ')+'.':'.'}</p>`;
+}
+
+function dayLogHtml(dayKey){
+  const log = STATE.days[dayKey] ? STATE.days[dayKey].log : [];
+  if(log.length===0) return '<p class="empty">Nessun alimento registrato.</p>';
+  return log.map(e=>{
+    const fo = foodById(e.food);
+    const kcal = fo? Math.round(fo.kcal*e.grams/100) : 0;
+    const qty = (e.units!=null && fo && fo.unitG) ? `${e.units} ${fo.unit} (${e.grams} g)` : `${e.grams} g`;
+    return `<div class="foodline"><span>${fo?fo.label:'(rimosso)'} — ${qty}</span><span class="m">${e.meal} · ${kcal} kcal</span></div>`;
+  }).join('');
+}
+
+function renderHistoryPage(){
   const keys = Object.keys(STATE.days).sort();
   const chartBox = document.getElementById('histChart');
-  const tableBox = document.getElementById('histTable');
-  if(!document.getElementById('histPanel').classList.contains('show')) return;
+  const daysBox = document.getElementById('histDays');
   if(keys.length===0){
     chartBox.innerHTML = '';
-    tableBox.innerHTML = '<p class="empty">Ancora nessun giorno registrato.</p>';
+    daysBox.innerHTML = '<p class="empty">Ancora nessun giorno registrato.</p>';
     return;
   }
-  const last = keys.slice(-10);
+  const last = keys.slice(-14);
   const maxKcal = Math.max(STATE.target.kcal, ...last.map(k=>dayTotals(STATE.days[k].log).kcal));
   chartBox.innerHTML = `<div class="chart">` + last.map(k=>{
     const t = dayTotals(STATE.days[k].log);
@@ -430,32 +490,32 @@ function renderHistory(){
       </div>
       <div class="lbl">${dd}</div></div>`;
   }).join('') + `</div>`;
-  const rows = last.slice().reverse().map(k=>{
+
+  daysBox.innerHTML = last.slice().reverse().map(k=>{
     const t = dayTotals(STATE.days[k].log);
-    const dd = new Date(k+'T00:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'});
     const pP = Math.min(100, Math.round(t.p/STATE.target.p*100));
     const pC = Math.min(100, Math.round(t.c/STATE.target.c*100));
     const pF = Math.min(100, Math.round(t.f/STATE.target.f*100));
-    return `<div class="hrow">
-      <div class="hd"><span>${dd}</span><b style="color:${kcalColor(t)}">${t.kcal} kcal</b></div>
+    return `<div class="daycard">
+      <div class="hd"><span class="dname">${fmtDay(k)}</span><b style="color:${kcalColor(t)}">${t.kcal} kcal</b></div>
       <div class="hbars">
         <div class="hbar"><div class="lbl"><span>Prot</span><span>${t.p}g</span></div><div class="track"><div style="width:${pP}%;background:var(--teal)"></div></div></div>
         <div class="hbar"><div class="lbl"><span>Carb</span><span>${t.c}g</span></div><div class="track"><div style="width:${pC}%;background:var(--blue)"></div></div></div>
         <div class="hbar"><div class="lbl"><span>Gras</span><span>${t.f}g</span></div><div class="track"><div style="width:${pF}%;background:var(--amber)"></div></div></div>
       </div>
+      ${dayLogHtml(k)}
     </div>`;
   }).join('');
-  tableBox.innerHTML = rows;
 }
 
 function renderAll(){
   const t = dayTotals(STATE.days[TODAY].log);
   renderToday();
+  renderTip();
   renderKcalCard(t);
   renderMacroCard(t);
   renderLog();
   renderAdvice(t);
-  renderHistory();
 }
 
 document.getElementById('addBtn').addEventListener('click', ()=>{
@@ -549,10 +609,13 @@ function renderMgList(){
 }
 document.getElementById('mgSearch').addEventListener('input', renderMgList);
 document.getElementById('histToggle').addEventListener('click', ()=>{
-  const p = document.getElementById('histPanel');
-  p.classList.toggle('show');
-  document.getElementById('histToggle').textContent = p.classList.contains('show') ? 'Chiudi riepilogo' : 'Riepilogo giorni';
-  if(p.classList.contains('show')){ renderHistory(); p.scrollIntoView({behavior:'smooth',block:'start'}); }
+  document.getElementById('historyPage').hidden = false;
+  document.body.style.overflow = 'hidden';
+  renderHistoryPage();
+});
+document.getElementById('histClose').addEventListener('click', ()=>{
+  document.getElementById('historyPage').hidden = true;
+  document.body.style.overflow = '';
 });
 document.getElementById('mgToggle').addEventListener('click', ()=>{
   const m = document.getElementById('manager');
