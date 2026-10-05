@@ -181,17 +181,20 @@ table.hist th:first-child,table.hist td:first-child{text-align:left;}
 <script>
 const BASE_FOODS = [
   {id:'pollo',label:'Petto di pollo',kcal:165,p:31,c:0,f:3.6},
+  {id:'carne',label:'Carne (media generica)',kcal:180,p:24,c:0,f:9},
   {id:'tonno',label:'Tonno in scatola',kcal:116,p:26,c:0,f:1},
   {id:'sgombro',label:'Sgombro in scatola',kcal:190,p:20,c:0,f:12},
   {id:'lenticchie',label:'Lenticchie in scatola',kcal:100,p:8,c:17,f:0.5},
   {id:'ceci',label:'Ceci in scatola',kcal:120,p:7,c:20,f:2},
   {id:'banana',label:'Banana',kcal:89,p:1.1,c:23,f:0.3},
-  {id:'riso',label:'Riso (cotto)',kcal:130,p:2.7,c:28,f:0.3},
-  {id:'pasta',label:'Pasta (cotta)',kcal:158,p:5.8,c:31,f:0.9},
-  {id:'patate',label:'Patate (cotte)',kcal:87,p:2,c:20,f:0.1},
+  {id:'riso',label:'Riso (crudo)',kcal:360,p:7,c:80,f:0.6},
+  {id:'pasta',label:'Pasta (cruda)',kcal:353,p:11,c:72,f:1.5},
+  {id:'patate',label:'Patate (crude)',kcal:77,p:2,c:17.5,f:0.1},
   {id:'pomodori',label:'Pomodori',kcal:18,p:0.9,c:3.9,f:0.2},
   {id:'carote',label:'Carote',kcal:41,p:0.9,c:10,f:0.2},
-  {id:'spinaci',label:'Spinaci (surgelati, cotti)',kcal:23,p:3,c:2,f:0.3},
+  {id:'spinaci',label:'Spinaci surgelati',kcal:25,p:3,c:1.5,f:0.4},
+  {id:'cornflakes',label:'Cornflakes',kcal:378,p:7,c:84,f:0.9},
+  {id:'parmigiano',label:'Parmigiano grattugiato',kcal:392,p:33,c:0,f:28},
   {id:'uova',label:'Uova intere',kcal:155,p:13,c:1.1,f:11},
   {id:'albume',label:'Albume',kcal:52,p:11,c:0.7,f:0.2},
   {id:'olio',label:'Olio EVO',kcal:884,p:0,c:0,f:100},
@@ -212,7 +215,7 @@ const UNITS = {banana:['banana',120], uova:['uovo',55], albume:['albume',33], yo
 BASE_FOODS.forEach(f=>{ if(UNITS[f.id]){ f.unit=UNITS[f.id][0]; f.unitG=UNITS[f.id][1]; } });
 const DEFAULT_TARGET = { kcal:2700, p:125, c:360, f:85, tdee:2320 };
 const NEVER_SUGGEST = ['gallette'];
-const PROTEIN_CAT = {pollo:'carne', bresaola:'carne', tonno:'pesce', sgombro:'pesce', lenticchie:'legumi', ceci:'legumi', uova:'uova', albume:'uova'};
+const PROTEIN_CAT = {pollo:'carne', carne:'carne', bresaola:'carne', tonno:'pesce', sgombro:'pesce', lenticchie:'legumi', ceci:'legumi', uova:'uova', albume:'uova'};
 const CAT_LABEL = {carne:'carne', pesce:'pesce', legumi:'legumi', uova:'uova'};
 const CAT_NEXT = {carne:'pesce', pesce:'legumi', legumi:'uova', uova:'carne'};
 const ITALIAN_DATE_OPTS = {weekday:'long', year:'numeric', month:'long', day:'numeric'};
@@ -232,9 +235,16 @@ function fmtDay(k){
 
 let STATE;
 try{ STATE = JSON.parse(document.getElementById('app-data').textContent); }catch(e){ STATE = null; }
+const LS_KEY = 'trackerMacro:state:v1';
+if(!STATE || typeof STATE!=='object' || !Object.keys(STATE).length){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) STATE = JSON.parse(raw); }catch(e){}
+}
 if(!STATE || typeof STATE!=='object') STATE = {};
 if(!STATE.days) STATE.days = {};
 if(!Array.isArray(STATE.foods)){ STATE.foods = BASE_FOODS.map(f=>Object.assign({},f)).concat(STATE.custom||[]); delete STATE.custom; }
+// migrazione: allinea riso/pasta (crudi) e aggiunge la carne generica se mancano
+STATE.foods.forEach(f=>{ if(['riso','pasta','patate','spinaci'].includes(f.id) && /cott/i.test(f.label)){ const b=BASE_FOODS.find(x=>x.id===f.id); Object.assign(f,{label:b.label,kcal:b.kcal,p:b.p,c:b.c,f:b.f}); } });
+['carne','parmigiano','cornflakes'].forEach(id=>{ if(!STATE.foods.some(f=>f.id===id)){ const b=BASE_FOODS.find(x=>x.id===id); STATE.foods.push(Object.assign({},b)); } });
 if(!STATE.target) STATE.target = Object.assign({}, DEFAULT_TARGET);
 else STATE.target = Object.assign({}, DEFAULT_TARGET, STATE.target);
 const TODAY = todayKey();
@@ -641,6 +651,7 @@ let artifactCap = null;
 let saveTimer = null;
 function save(){
   document.getElementById('app-data').textContent = JSON.stringify(STATE);
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(STATE)); }catch(e){}
   if(!artifactCap) return;
   clearTimeout(saveTimer);
   const statusEl = document.getElementById('status');
